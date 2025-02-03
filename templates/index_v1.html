@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ultimate Slot Machine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --item-height: 100px;
+        }
+
+        body {
+            margin: 0;
+            transition: background-color 0.3s;
+        }
+
+        #container {
+            background-color: #fd9b03;
+            padding: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 567px;
+        }
+
+        .window {
+            position: relative;
+            overflow: hidden;
+            height: calc(3 * var(--item-height));
+            border: 1px solid #f7ce6c;
+        }
+
+        .window-border {
+            background-image: linear-gradient(to bottom, #fcf8ad, #f8f3cd, #f9e13d);
+            border-radius: 10px;
+        }
+
+        .icon {
+            width: 80px;
+            height: var(--item-height);
+            display: block;
+            position: relative;
+            transition: transform 0.3s;
+        }
+
+        .icon img {
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+        }
+
+        .outer-col {
+            overflow-y: hidden;
+            width: 100px;
+            float: left;
+            background-image: linear-gradient(#16013c, #741a5e, #430155, #16013c);
+            height: calc(var(--item-height) * 3);
+        }
+
+        .col {
+            padding: 0 10px;
+            will-change: transform;
+            transform: translateY(calc(-100% + var(--item-height) * 3));
+        }
+
+        @keyframes scroll {
+            to { transform: translateY(0); }
+        }
+
+        .win-animation {
+            animation: winBlink 1s infinite;
+        }
+
+        @keyframes winBlink {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+            100% { filter: brightness(1); }
+        }
+
+        .control-panel {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .jackpot-counter {
+            font-size: 1.5rem;
+            color: gold;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+
+        .bonus-game {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .bonus-slot-col {
+          width: 80px;
+          display: inline-block;
+          overflow-y: hidden;
+          height: calc(var(--item-height) * 3);
+        }
+
+        .bonus-slot {
+          padding: 0 10px;
+          will-change: transform;
+          transform: translateY(calc(-100% + var(--item-height) * 3));
+        }
+
+        .payline-highlight {
+          border: 2px solid yellow;
+        }
+
+        @media (max-width: 768px) {
+            #container {
+                min-width: auto;
+                width: 95%;
+                padding: 1rem;
+            }
+
+            .outer-col {
+                width: 80px;
+            }
+        }
+
+        #loading-screen {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: #333;
+          color: white;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 2rem;
+          z-index: 1001;
+        }
+    </style>
+</head>
+<body class="bg-gray-800">
+    <div id="loading-screen">Loading...</div>
+    <div id="container" class="dark:bg-gray-700">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex gap-2">
+                <select id="themeSelect" class="bg-gray-800 text-white p-2 rounded" onchange="changeTheme(this.value)">
+                    <option value="default">Default</option>
+                    <option value="dark">Dark</option>
+                    <option value="neon">Neon</option>
+                </select>
+                <button onclick="toggleSound()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Sound: ON
+                </button>
+                <button onclick="toggleAutoSpin()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    Auto Spin: OFF
+                </button>
+            </div>
+            <div class="text-white">
+                <div>Score: <span id="score">1000</span></div>
+                <div>
+                  Bet:
+                    <input id="betAmount" type="number" value="100" min="10" max="1000" class="w-20 text-black p-1">
+                    <button onclick="adjustBet(-10)" class="bg-gray-600 text-white px-1 py-1 rounded">-10</button>
+                    <button onclick="adjustBet(10)" class="bg-gray-600 text-white px-1 py-1 rounded">+10</button>
+                    <button onclick="adjustBet(100)" class="bg-gray-600 text-white px-1 py-1 rounded">+100</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="window-border">
+            <div class="window">
+                <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                 <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                 <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                 <div class="outer-spacer"></div>
+                <div class="outer-col">
+                    <div class="col"></div>
+                </div>
+                <div class="outer-spacer"></div>
+            </div>
+        </div>
+
+        <div class="control-panel text-center">
+            <button onclick="spin()" class="bg-green-600 text-white px-8 py-3 rounded-lg text-xl hover:bg-green-700 transition-all">
+                SPIN (Space)
+            </button>
+            <div class="jackpot-counter mt-2">Jackpot: <span id="jackpot">5000</span></div>
+        </div>
+
+        <div class="bonus-game">
+            <h2 class="text-2xl text-white mb-4">BONUS ROUND!</h2>
+            <div id="bonusSlots" class="flex gap-4 justify-center"></div>
+            <button onclick="endBonus()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
+                Collect Reward!
+            </button>
+        </div>
+    </div>
+
+    <div id="paytable" class="fixed top-4 left-4 bg-black bg-opacity-50 p-4 rounded text-white">
+        <h3 class="text-xl mb-2">Paytable</h3>
+        <div id="paytableContent"></div>
+    </div>
+
+    <div id="history" class="fixed top-4 right-4 bg-black bg-opacity-50 p-4 rounded text-white w-48">
+        <h3 class="text-xl mb-2">Recent Wins</h3>
+        <div id="historyContent"></div>
+    </div>
+
+    <audio id="spinSound" src="/static/audio/spin.wav" preload="auto"></audio>
+    <audio id="winSound" src="/static/audio/win.wav" preload="auto"></audio>
+    <audio id="bonusSound" src="/static/audio/bonus.wav" preload="auto"></audio>
+
+    <script>
+        const BASE_ICONS = [
+            'apple', 'apricot', 'banana', 'big_win', 'cherry',
+            'grapes', 'lemon', 'lucky_seven', 'orange', 'pear',
+            'strawberry', 'watermelon'
+        ];
+
+        const ENHANCED_CONFIG = {
+            WILD_SYMBOL: 'wild',
+            BONUS_TRIGGER: 'bonus',
+            PAYLINES: [
+                [{row: 0, col: 0}, {row: 0, col: 1}, {row: 0, col: 2}, {row: 0, col: 3}, {row: 0, col: 4}],
+                [{row: 1, col: 0}, {row: 1, col: 1}, {row: 1, col: 2}, {row: 1, col: 3}, {row: 1, col: 4}],
+                [{row: 2, col: 0}, {row: 2, col: 1}, {row: 2, col: 2}, {row: 2, col: 3}, {row: 2, col: 4}],
+                [{row: 0, col: 0}, {row: 1, col: 1}, {row: 2, col: 2}, {row: 1, col: 3}, {row: 0, col: 4}],
+                [{row: 2, col: 0}, {row: 1, col: 1}, {row: 0, col: 2}, {row: 1, col: 3}, {row: 2, col: 4}]
+            ],
+            BONUS_ROUNDS: 3,
+            AUTO_SPIN_INTERVAL: 1500,
+        };
+
+        const ENHANCED_ICONS = [...BASE_ICONS, ENHANCED_CONFIG.WILD_SYMBOL, ENHANCED_CONFIG.BONUS_TRIGGER];
+        const BONUS_ICONS = ['diamond', 'gold_bar', 'gem', 'money_bag']; // Add bonus icons
+        const PAYOUTS = {
+            'lucky_seven': 10,
+            'big_win': 8,
+            'cherry': 5,
+            [ENHANCED_CONFIG.WILD_SYMBOL]: 15,
+            [ENHANCED_CONFIG.BONUS_TRIGGER]: { type: 'bonus', multiplier: 5 },
+            'default': 3,
+        };
+        const BONUS_PAYOUTS = {
+            'diamond': 15,
+            'gold_bar': 10,
+            'gem': 7,
+            'money_bag': 5,
+        };
+
+        const BASE_SPINNING_DURATION = 2.7;
+        const COLUMN_SPINNING_DURATION = 0.3;
+
+        let cols;
+        let bonusCols;
+        let score = 1000;
+        let jackpot = 5000;
+        let isSoundOn = true;
+        let currentBet = 100;
+        let isBonusRound = false;
+        let autoSpinInterval = null;
+        let winHistory = [];
+        let consecutiveWins = 0;
+
+        const spinSound = document.getElementById('spinSound');
+        const winSound = document.getElementById('winSound');
+        const bonusSound = document.getElementById('bonusSound');
+
+        window.addEventListener('DOMContentLoaded', function() {
+            cols = document.querySelectorAll('.col');
+            bonusCols = document.querySelectorAll('.bonus-slot')
+            setInitialItems();
+            initPaytable();
+            loadGame();
+            document.addEventListener('keydown', (e) => e.code === 'Space' && spin());
+            document.getElementById('loading-screen').style.display = 'none';
+        });
+
+        function setInitialItems() {
+          const baseItemAmount = 45;
+          cols.forEach((col, index) => {
+              const amountOfItems = baseItemAmount + (index * 3);
+              let itemsHTML = '';
+              for (let x = 0; x <= amountOfItems; x++) {
+                  const icon = getRandomIcon();
+                  itemsHTML += `<div class="icon" data-item="${icon}"><img src="/static/items/${icon}.png"></div>`;
+              }
+              col.innerHTML = itemsHTML + itemsHTML;
+          });
+      }
+
+        function spin() {
+            if (isBonusRound || score < currentBet) {
+                if (score < currentBet) alert('Not enough points!');
+                return;
+            }
+
+            score -= currentBet;
+            updateDisplay();
+
+            // Reset animations properly
+            cols.forEach(col => {
+                col.style.transform = 'translateY(0)';
+                col.style.transition = 'none';
+                void col.offsetHeight; // Trigger reflow
+                col.style.transform = `translateY(calc(-100% + var(--item-height) * 3))`;
+                col.style.transition = `transform ${BASE_SPINNING_DURATION + Math.random()/10}s cubic-bezier(.65, .97, .72, 1)`;
+            });
+
+            document.getElementById('container').classList.add('spinning');
+
+            if (isSoundOn) spinSound.play();
+
+            setTimeout(() => {
+                setResult();
+                const winAmount = checkEnhancedWin();
+                if (winAmount > 0) {
+                    score += winAmount;
+                    jackpot += currentBet;
+                    showWinAnimation(winAmount);
+                    winHistory.unshift({ amount: winAmount, time: new Date().toLocaleTimeString() });
+                    updateHistory();
+                    if (isSoundOn) winSound.play();
+                } else {
+                    jackpot += currentBet * 0.1;
+                }
+
+                document.getElementById('container').classList.remove('spinning');
+                updateDisplay();
+                saveGame();
+
+                // Reset animation state
+                cols.forEach(col => {
+                    col.style.transition = '';
+                    col.style.transform = 'translateY(0)';
+                });
+            }, BASE_SPINNING_DURATION * 1000);
+        }
+
+        function checkEnhancedWin() {
+            const results = Array.from(cols).map(col =>
+                Array.from(col.querySelectorAll('.icon img'))
+                    .slice(0, 3)
+                    .map(img => img.src.split('/').pop().split('.')[0])
+            );
+
+            let totalWin = 0;
+            let bonusTriggers = 0;
+
+            ENHANCED_CONFIG.PAYLINES.forEach(payline => {
+                const lineSymbols = payline.map(pos => results[pos.col][pos.row]);
+                let wildCount = 0;
+                const symbols = lineSymbols.map(sym => {
+                    if (sym === ENHANCED_CONFIG.WILD_SYMBOL) wildCount++;
+                    return sym === ENHANCED_CONFIG.WILD_SYMBOL ? 'WILD' : sym;
+                });
+
+                const unique = [...new Set(symbols)];
+                if (unique.length === 1 || (unique.length === 2 && unique.includes('WILD'))) {
+                    const baseSymbol = unique.find(s => s !== 'WILD') || 'WILD';
+                    const payout = PAYOUTS[baseSymbol]?.value || PAYOUTS.default;
+                    totalWin += currentBet * payout * (1 + wildCount * 0.5);
+                }
+
+                if (lineSymbols.includes(ENHANCED_CONFIG.BONUS_TRIGGER)) bonusTriggers++;
+            });
+
+            if (bonusTriggers >= 3) startBonusRound();
+            return Math.floor(totalWin);
+        }
+
+
+        function startBonusRound() {
+          isBonusRound = true;
+            document.querySelector('.bonus-game').style.display = 'block';
+            document.getElementById('bonusSlots').innerHTML = '';
+            for(let i = 0; i < ENHANCED_CONFIG.BONUS_ROUNDS; i++) {
+              const bonusCol = document.createElement('div');
+              bonusCol.className = 'bonus-slot-col';
+              const bonusSlot = document.createElement('div');
+                bonusSlot.className = 'bonus-slot';
+                bonusCol.appendChild(bonusSlot);
+              document.getElementById('bonusSlots').appendChild(bonusCol);
+            }
+           bonusCols = document.querySelectorAll('.bonus-slot')
+           setBonusItems();
+
+           if (isSoundOn) bonusSound.play();
+
+           setTimeout(() => {
+               spinBonusSlots()
+               setTimeout(() => {
+                   const bonusWin = calculateBonusWin();
+                   showWinAnimation(bonusWin, true);
+               }, 2000)
+            }, 200);
+
+        }
+
+      function spinBonusSlots() {
+        bonusCols.forEach(col => {
+          col.style.transform = 'translateY(0)';
+          col.style.transition = 'none';
+          void col.offsetHeight;
+          col.style.transform = `translateY(calc(-100% + var(--item-height) * 3))`;
+          col.style.transition = `transform 1.8s cubic-bezier(.65, .97, .72, 1)`;
+          });
+
+           setTimeout(() => {
+             setBonusResult();
+           }, 1800)
+       }
+
+       function setBonusItems() {
+           const baseItemAmount = 30;
+           bonusCols.forEach(col => {
+               const amountOfItems = baseItemAmount;
+               let itemsHTML = '';
+               for (let x = 0; x <= amountOfItems; x++) {
+                   const icon = getRandomBonusIcon();
+                   itemsHTML += `<div class="icon bonus-icon" data-item="${icon}"><img src="/static/items/${icon}.png"></div>`;
+               }
+               col.innerHTML = itemsHTML + itemsHTML;
+           });
+       }
+
+       function setBonusResult() {
+         bonusCols.forEach(col => {
+           const results = Array.from({ length: 3 }, () => getRandomBonusIcon());
+           const icons = col.querySelectorAll('.icon img');
+           icons.forEach((icon, index) => {
+               if (index < 3 || index >= icons.length - 3) {
+                  icon.src = `/static/items/${results[index % 3]}.png`;
+               }
+           });
+         });
+       }
+
+      function calculateBonusWin() {
+          let totalWin = 0;
+          const bonusResults = Array.from(bonusCols).map(col =>
+              Array.from(col.querySelectorAll('.icon img'))
+                  .slice(0, 3)
+                  .map(img => img.src.split('/').pop().split('.')[0])
+          );
+
+          bonusResults.forEach(slot => {
+            const unique = [...new Set(slot)];
+             if (unique.length === 1) {
+               const symbol = unique[0];
+               const payout = BONUS_PAYOUTS[symbol] || 0;
+               totalWin += currentBet * payout;
+            }
+          });
+
+          return totalWin;
+      }
+
+        function endBonus() {
+            isBonusRound = false;
+            document.querySelector('.bonus-game').style.display = 'none';
+            score += jackpot;
+            jackpot = 5000;
+            updateDisplay();
+        }
+
+        function showWinAnimation(amount, isBonus = false) {
+           if (amount > currentBet * 10) {
+               confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+           }
+            const winMsg = document.createElement('div');
+            winMsg.textContent = `WIN: ${amount}!`;
+            winMsg.className = 'animate__animated animate__tada text-4xl text-yellow-400 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
+            if(isBonus) winMsg.className += ' bg-black bg-opacity-75 rounded px-4';
+            document.body.appendChild(winMsg);
+            setTimeout(() => winMsg.remove(), 2000);
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('jackpot').textContent = Math.floor(jackpot);
+            currentBet = Math.min(Math.max(parseInt(document.getElementById('betAmount').value), 10), 1000);
+        }
+
+        function initPaytable() {
+            const paytableHTML = Object.entries(PAYOUTS)
+                .filter(([symbol]) => symbol !== ENHANCED_CONFIG.BONUS_TRIGGER) // Exclude bonus trigger from paytable
+                .map(([symbol, value]) => `
+                    <div class="flex justify-between py-1">
+                        <span>${symbol}</span>
+                        <span>${typeof value === 'object' ? 'BONUS' : 'x'+value}</span>
+                    </div>`
+                ).join('');
+
+            const bonusPaytableHTML = Object.entries(BONUS_PAYOUTS)
+               .map(([symbol, value]) => `
+                   <div class="flex justify-between py-1">
+                       <span>${symbol}</span>
+                       <span>x${value}</span>
+                   </div>
+               `).join('');
+
+
+           document.getElementById('paytableContent').innerHTML = `
+                <div>
+                    <h4 class="text-lg">Main Game Payouts</h4>
+                    ${paytableHTML}
+                </div>
+                <div>
+                    <h4 class="text-lg mt-2">Bonus Game Payouts</h4>
+                    ${bonusPaytableHTML}
+               </div>
+           `;
+       }
+
+        function updateHistory() {
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = winHistory
+                .slice(0, 5)
+                .map(win => `<div class="history-item">${win.amount} (${win.time})</div>`)
+                .join('');
+        }
+
+        function toggleAutoSpin() {
+            const button = document.querySelector('[onclick="toggleAutoSpin()"]');
+            if (!autoSpinInterval) {
+                autoSpinInterval = setInterval(spin, ENHANCED_CONFIG.AUTO_SPIN_INTERVAL);
+                button.textContent = 'Auto Spin: ON';
+                button.classList.replace('bg-purple-600', 'bg-purple-800');
+            } else {
+                clearInterval(autoSpinInterval);
+                autoSpinInterval = null;
+                button.textContent = 'Auto Spin: OFF';
+                button.classList.replace('bg-purple-800', 'bg-purple-600');
+            }
+        }
+
+        function adjustBet(amount) {
+          const betInput = document.getElementById('betAmount');
+          const newBet = Math.max(10, Math.min(1000, parseInt(betInput.value) + amount))
+            betInput.value = newBet;
+            updateDisplay();
+        }
+
+        function changeTheme(theme) {
+            document.body.className = '';
+            switch(theme) {
+                case 'dark': document.body.classList.add('bg-gray-900'); break;
+                case 'neon': document.body.classList.add('bg-purple-900'); break;
+                default: document.body.classList.add('bg-gray-800');
+            }
+        }
+
+        function toggleSound() {
+            const button = document.querySelector('[onclick="toggleSound()"]');
+            isSoundOn = !isSoundOn;
+            button.textContent = `Sound: ${isSoundOn ? 'ON' : 'OFF'}`;
+        }
+
+        function saveGame() {
+            localStorage.setItem('slotGame', JSON.stringify({
+                score,
+                jackpot,
+                preferences: {
+                    sound: isSoundOn,
+                    theme: document.getElementById('themeSelect').value
+                }
+            }));
+        }
+
+        function loadGame() {
+            const saved = JSON.parse(localStorage.getItem('slotGame'));
+            if (saved) {
+                score = saved.score;
+                jackpot = saved.jackpot;
+                isSoundOn = saved.preferences.sound;
+                changeTheme(saved.preferences.theme);
+                document.getElementById('themeSelect').value = saved.preferences.theme;
+                updateDisplay();
+            }
+        }
+
+        function getRandomIcon() {
+            return ENHANCED_ICONS[Math.floor(Math.random() * ENHANCED_ICONS.length)];
+        }
+
+         function getRandomBonusIcon() {
+             return BONUS_ICONS[Math.floor(Math.random() * BONUS_ICONS.length)];
+         }
+
+        function setResult() {
+            cols.forEach(col => {
+                const results = Array.from({ length: 3 }, () => getRandomIcon());
+                const icons = col.querySelectorAll('.icon img');
+                icons.forEach((icon, index) => {
+                    if (index < 3 || index >= icons.length - 3) {
+                       icon.src = `/static/items/${results[index % 3]}.png`;
+                    }
+                });
+            });
+        }
+
+        // Payline Highlighting (Example) -  add in .spin() when calculating a win if needed for final implementation
+        function highlightPayline(payline) {
+            // Remove old highlights first
+            cols.forEach(col => {
+                Array.from(col.querySelectorAll('.icon')).forEach(icon => icon.classList.remove('payline-highlight'));
+            });
+
+            const results = Array.from(cols).map(col => Array.from(col.querySelectorAll('.icon')));
+
+            // Apply highlights to winning payline
+            payline.forEach(pos => {
+                results[pos.col][pos.row].classList.add('payline-highlight');
+            });
+        } 
+    </script>
+</body>
+</html>
