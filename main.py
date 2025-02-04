@@ -2,12 +2,6 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_cors import CORS
-import jwt
-import datetime
-from datetime import datetime
-from functools import wraps
-
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -17,8 +11,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-CORS(app)  # This will enable CORS for all routes
-
 
 # Database Models
 class User(UserMixin, db.Model):
@@ -47,28 +39,6 @@ class GameTransaction(db.Model):
     transaction_type = db.Column(db.String(20), nullable=False)  # 'bet' or 'win'
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
-
-def token_required(f):
-    @wraps(f)
-    def decorator(*args, **kwargs):
-        token = None
-        if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1]  # Extract token
-        if not token:
-            return jsonify({"error": "Token is missing"}), 401
-        try:
-            # Decode the token using the SECRET_KEY
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            # Assuming the token has user_id or username
-            current_user = get_user_by_id(data['user_id'])  # Implement this function based on your DB structure
-            if not current_user:
-                raise Exception("User not found")
-        except Exception as e:
-            return jsonify({"error": str(e)}), 401
-        return f(current_user, *args, **kwargs)
-    return decorator
-
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -78,10 +48,12 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        if request.is_json:
+        # Check if it's a normal form POST (from the form submission) or a fetch API request (JSON)
+        if request.is_json:  # Handling fetch API call
             data = request.get_json()
 
             username = data.get('username')
@@ -103,7 +75,9 @@ def signup():
                 return jsonify({"success": False, "message": "Passwords do not match"}), 400
 
             hashed_password = generate_password_hash(password)
-            new_user = User(username=username, email=email, password=hashed_password, terms=terms)
+            new_user = User(username=username, email=email, password=hashed_password, terms=terms,
+                            balance=1000,  # Initial balance
+                            high_score=1000)  # Initial high score
 
             db.session.add(new_user)
             db.session.commit()
@@ -113,68 +87,58 @@ def signup():
 
     return render_template('signup.html')
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Check if the request is coming from a normal form submission or AJAX (fetch)
         if request.is_json:
             data = request.get_json()
             email = data.get('email')
             password = data.get('password')
 
             user = User.query.filter_by(email=email).first()
-            if user and check_password_hash(user.password, password):
+            
+            if user:
                 login_user(user)
-                token = create_token(user)
-                return jsonify({"success": True, "message": "Login successful", "token":token}), 200
+                return jsonify({"success": True, "message": "Login successful"}), 200
 
             return jsonify({"success": False, "message": "Invalid username or password"}), 401
         
     return render_template('login.html')
 
-def create_token(user):
-    """Create a JWT token for the user."""
-    expiration_time = datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # 1 hour expiration
-    payload = {
-        'user_id': user.id,  # or 'email': user.email depending on what you want in the payload
-        'exp': expiration_time
-    }
-    
-    # Create the token with the payload and secret key
-    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-
-    return token
-
 @app.route('/logout')
-@token_required
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
 @app.route('/game')
+@login_required
 def game():
     return render_template('game.html')
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Routes
 @app.route('/api/bet', methods=['POST'])
-@token_required
-def place_bet(current_user):
-    # Retrieve the data from the request body
+@login_required
+def place_bet():
     data = request.get_json()
     bet_amount = data.get('amount')
     
-    # Validate the bet amount
     if not bet_amount or bet_amount <= 0:
         return jsonify({"status": "error", "message": "Invalid bet amount"}), 400
-    
-    # Check if the user has enough balance
+        
     if current_user.balance < bet_amount:
         return jsonify({"status": "error", "message": "Insufficient balance"}), 400
 
     try:
-        # Deduct the bet amount from user's balance
         current_user.balance -= bet_amount
         current_user.total_bet += bet_amount
         
-        # Record the transaction in the database
         transaction = GameTransaction(
             user_id=current_user.id,
             amount=bet_amount,
@@ -184,7 +148,6 @@ def place_bet(current_user):
         db.session.add(transaction)
         db.session.commit()
         
-        # Return the updated information
         return jsonify({
             "status": "success",
             "new_balance": current_user.balance,
@@ -196,7 +159,7 @@ def place_bet(current_user):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/win', methods=['POST'])
-@token_required
+@login_required
 def register_win():
     data = request.get_json()
     win_amount = data.get('amount')
@@ -208,6 +171,7 @@ def register_win():
         current_user.balance += win_amount
         current_user.total_wins += win_amount
         
+        # Update high score if current balance exceeds it
         if current_user.balance > current_user.high_score:
             current_user.high_score = current_user.balance
             
@@ -231,24 +195,16 @@ def register_win():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-# Your route now uses the token_required decorator
 @app.route('/api/user/stats', methods=['GET'])
-@token_required
-def get_user_stats(current_user):
-    # If user is authenticated (by token), return user data
+@login_required
+def get_user_stats():
     return jsonify({
         "username": current_user.username,
         "balance": current_user.balance,
         "high_score": current_user.high_score,
         "total_bet": current_user.total_bet,
         "total_wins": current_user.total_wins
-    }), 200
-
-# You should have a function to get the user by ID or username
-def get_user_by_id(user_id):
-    user  =  User.query.filter_by(id=user_id).first()
-    return user
+    })
 
 @app.route('/api/leaderboard', methods=['GET'])
 def leaderboard():
@@ -270,7 +226,7 @@ def leaderboard():
     return jsonify(leaderboard_data)
 
 @app.route('/api/transactions', methods=['GET'])
-@token_required
+@login_required
 def get_transactions():
     transactions = GameTransaction.query.filter_by(user_id=current_user.id)\
         .order_by(GameTransaction.timestamp.desc()).limit(10).all()

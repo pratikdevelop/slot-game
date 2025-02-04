@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ultimate Slot Machine - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: "Bree Serif", serif;
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      :root {
+        --item-height: 100px;
+      }
+
+      body {
+        margin: 0;
+        transition: background-color 0.3s;
+      }
+
+      #container {
+        background-color: #fd9b03;
+        padding: 2rem;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        border-radius: 15px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 567px;
+      }
+
+      .window {
+        position: relative;
+        overflow: hidden;
+        height: calc(3 * var(--item-height));
+        border: 1px solid #f7ce6c;
+      }
+
+      .window-border {
+        background-image: linear-gradient(to bottom, #fcf8ad, #f8f3cd, #f9e13d);
+        border-radius: 10px;
+      }
+
+      .icon {
+        width: 80px;
+        height: var(--item-height);
+        display: block;
+        position: relative;
+        transition: transform 0.3s;
+      }
+
+      .icon img {
+        filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
+      }
+
+      .outer-col {
+        overflow-y: hidden;
+        width: 100px;
+        float: left;
+        background-image: linear-gradient(#16013c, #741a5e, #430155, #16013c);
+        height: calc(var(--item-height) * 3);
+      }
+
+      .col {
+        padding: 0 10px;
+        will-change: transform;
+        transform: translateY(calc(-100% + var(--item-height) * 3));
+      }
+
+      @keyframes scroll {
+        to {
+          transform: translateY(0);
+        }
+      }
+
+      .win-animation {
+        animation: winBlink 1s infinite;
+      }
+
+      @keyframes winBlink {
+        0% {
+          filter: brightness(1);
+        }
+
+        50% {
+          filter: brightness(1.5);
+        }
+
+        100% {
+          filter: brightness(1);
+        }
+      }
+
+      .control-panel {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+      }
+
+      .jackpot-counter {
+        font-size: 1.5rem;
+        color: gold;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      }
+
+      .bonus-game {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #1a1a1a;
+        padding: 2rem;
+        border-radius: 1rem;
+        text-align: center;
+        display: none;
+        z-index: 1000;
+      }
+
+      .bonus-slot-col {
+        width: 80px;
+        display: inline-block;
+        overflow-y: hidden;
+        height: calc(var(--item-height) * 3);
+      }
+
+      .bonus-slot {
+        padding: 0 10px;
+        will-change: transform;
+        transform: translateY(calc(-100% + var(--item-height) * 3));
+      }
+
+      .payline-highlight {
+        border: 2px solid yellow;
+      }
+
+      @media (max-width: 768px) {
+        #container {
+          min-width: auto;
+          width: 95%;
+          padding: 1rem;
+        }
+
+        .outer-col {
+          width: 80px;
+        }
+      }
+
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #333;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 2rem;
+        z-index: 1001;
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-800">
+    <div id="loading-screen">Loading...</div>
+    <nav class="flex bg-slate-800 items-center justify-between p-2">
+      <div class="flex items-center">
+        <a href="#" class="text-white text-lg font-bold">Slot Machine</a>
+      </div>
+      <div class="flex items-center space-x-6" id="authSection"></div>
+    </nav>
+    <div id="container" class="dark:bg-gray-700">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2">
+          <select
+            id="themeSelect"
+            class="bg-gray-800 text-white p-2 rounded"
+            onchange="changeTheme(this.value)"
+          >
+            <option value="default">Default</option>
+            <option value="dark">Dark</option>
+            <option value="neon">Neon</option>
+          </select>
+          <button
+            onclick="toggleSound()"
+            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Sound: ON
+          </button>
+          <button
+            onclick="toggleAutoSpin()"
+            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+          >
+            Auto Spin: OFF
+          </button>
+        </div>
+        <div class="text-white">
+          <div><span id="balance"></span></div>
+          <div><span id="high_score"></span></div>
+          <div><span id="total_bet"></span></div>
+          <div><span id="total_wins"></span></div>
+
+          <div>
+            Bet:
+            <input
+              id="betAmount"
+              type="number"
+              value="100"
+              min="10"
+              max="1000"
+              class="w-20 text-black p-1"
+            />
+            <button
+              onclick="adjustBet(-10)"
+              class="bg-gray-600 text-white px-1 py-1 rounded"
+            >
+              -10
+            </button>
+            <button
+              onclick="adjustBet(10)"
+              class="bg-gray-600 text-white px-1 py-1 rounded"
+            >
+              +10
+            </button>
+            <button
+              onclick="adjustBet(100)"
+              class="bg-gray-600 text-white px-1 py-1 rounded"
+            >
+              +100
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="window-border">
+        <div class="window">
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+          <div class="outer-col">
+            <div class="col"></div>
+          </div>
+          <div class="outer-spacer"></div>
+        </div>
+      </div>
+
+      <div class="control-panel text-center">
+        <button
+          onclick="spin()"
+          class="bg-green-600 text-white px-8 py-3 rounded-lg text-xl hover:bg-green-700 transition-all"
+        >
+          SPIN (Space)
+        </button>
+        <div class="jackpot-counter mt-2">
+          Jackpot: <span id="jackpot">5000</span>
+        </div>
+        <button
+          onclick="openPaymentModal()"
+          class="bg-yellow-500 text-black px-4 py-2 rounded-lg mt-4 hover:bg-yellow-600"
+        >
+          Pay with Real Money
+        </button>
+      </div>
+
+      <div class="bonus-game">
+        <h2 class="text-2xl text-white mb-4">BONUS ROUND!</h2>
+        <div id="bonusSlots" class="flex gap-4 justify-center"></div>
+        <button
+          onclick="endBonus()"
+          class="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Collect Reward!
+        </button>
+      </div>
+
+      <!-- Payment Modal -->
+      <div
+        id="paymentModal"
+        class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center hidden"
+      >
+        <div class="bg-white p-8 rounded-lg">
+          <h2 class="text-2xl mb-4">Add Funds to Your Balance</h2>
+          <p>How much would you like to add?</p>
+          <input
+            type="number"
+            id="paymentAmount"
+            class="w-full p-2 border rounded mb-4"
+            placeholder="Enter amount"
+          />
+          <div class="flex justify-end">
+            <button
+              onclick="closePaymentModal()"
+              class="bg-gray-400 text-white px-4 py-2 rounded mr-2 hover:bg-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              onclick="processPayment()"
+              class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            >
+              Pay Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+<script>
+  const BASE_ICONS = [
+    "apple",
+    "apricot",
+    "banana",
+    "big_win",
+    "cherry",
+    "grapes",
+    "lemon",
+    "lucky_seven",
+    "orange",
+    "pear",
+    "strawberry",
+    "watermelon",
+  ];
+
+  const ENHANCED_CONFIG = {
+    WILD_SYMBOL: "wild",
+    BONUS_TRIGGER: "bonus",
+    PAYLINES: [
+      [
+        { row: 0, col: 0 },
+        { row: 0, col: 1 },
+        { row: 0, col: 2 },
+        { row: 0, col: 3 },
+        { row: 0, col: 4 },
+      ],
+      [
+        { row: 1, col: 0 },
+        { row: 1, col: 1 },
+        { row: 1, col: 2 },
+        { row: 1, col: 3 },
+        { row: 1, col: 4 },
+      ],
+      [
+        { row: 2, col: 0 },
+        { row: 2, col: 1 },
+        { row: 2, col: 2 },
+        { row: 2, col: 3 },
+        { row: 2, col: 4 },
+      ],
+      [
+        { row: 0, col: 0 },
+        { row: 1, col: 1 },
+        { row: 2, col: 2 },
+        { row: 1, col: 3 },
+        { row: 0, col: 4 },
+      ],
+      [
+        { row: 2, col: 0 },
+        { row: 1, col: 1 },
+        { row: 0, col: 2 },
+        { row: 1, col: 3 },
+        { row: 2, col: 4 },
+      ],
+    ],
+    BONUS_ROUNDS: 3,
+    AUTO_SPIN_INTERVAL: 1500,
+  };
+
+  const ENHANCED_ICONS = [
+    ...BASE_ICONS,
+    ENHANCED_CONFIG.WILD_SYMBOL,
+    ENHANCED_CONFIG.BONUS_TRIGGER,
+  ];
+  const BONUS_ICONS = ["diamond", "gold_bar", "gem", "money_bag"];
+  const PAYOUTS = {
+    lucky_seven: 10,
+    big_win: 8,
+    cherry: 5,
+    [ENHANCED_CONFIG.WILD_SYMBOL]: 15,
+    [ENHANCED_CONFIG.BONUS_TRIGGER]: { type: "bonus", multiplier: 5 },
+    default: 3,
+  };
+  const BONUS_PAYOUTS = {
+    diamond: 15,
+    gold_bar: 10,
+    gem: 7,
+    money_bag: 5,
+  };
+
+  const BASE_SPINNING_DURATION = 2.7;
+  const COLUMN_SPINNING_DURATION = 0.3;
+
+  let cols;
+  let bonusCols;
+  let isSoundOn = true;
+  let currentBet = 100;
+  let isBonusRound = false;
+  let autoSpinInterval = null;
+  let winHistory = [];
+  let consecutiveWins = 0;
+
+  let balance = 0;
+  let high_score = 0;
+  let total_bet = 0;
+  let total_wins = 0;
+
+  window.addEventListener("DOMContentLoaded", function () {
+    checkAuthState();
+
+    cols = document.querySelectorAll(".col");
+    bonusCols = document.querySelectorAll(".bonus-slot");
+    setInitialItems();
+    // initPaytable();
+    document.addEventListener("keydown", (e) => e.code === "Space" && spin());
+    document.getElementById("loading-screen").style.display = "none";
+  });
+
+  function checkAuthState() {
+    // Retrieve the token from localStorage
+    const token = localStorage.getItem('slot-token'); // Make sure to save the token to localStorage during login
+
+    if (!token) {
+        console.log("No token found, please log in.");
+        return; // If no token exists, stop the function
+    }
+
+    fetch("http://localhost:5000/api/user/stats", {
+      method: "GET",
+      headers: {
+        'Authorization': `Bearer ${token}`,  // Attach token in Authorization header
+        'Content-Type': 'application/json'   // Ensure the content type is set to JSON
+      }
+    })
+    .then((response) => {
+      if (response.ok) {
+        return response.json();
+      } else {
+        return Promise.reject(response.statusText);
+      }
+    })
+    .then((data) => {
+      console.log(data);
+      // Update global variables with data from backend
+      balance = data.balance;
+      high_score = data.high_score;
+      total_bet = data.total_bet;
+      total_wins = data.total_wins;
+
+      const authSection = document.getElementById("authSection");
+      authSection.innerHTML = `
+        <span class="text-white">Welcome, ${data.username}</span>
+        <button onclick="logoutUser()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Logout
+        </button>
+      `;
+      updateDisplay(balance, high_score, total_bet, total_wins);
+    })
+    .catch((error) => {
+      console.error('Error fetching user stats:', error);
+    });
+  }
+
+  async function logoutUser() {
+    window.location.href = "/login";
+  }
+
+  function setInitialItems() {
+    const baseItemAmount = 45;
+    cols.forEach((col, index) => {
+      const amountOfItems = baseItemAmount + index * 3;
+      let itemsHTML = "";
+      for (let x = 0; x <= amountOfItems; x++) {
+        const icon = getRandomIcon();
+        itemsHTML += `<div class="icon" data-item="${icon}"><img src="/static/items/${icon}.png"></div>`;
+      }
+      col.innerHTML = itemsHTML + itemsHTML;
+    });
+  }
+
+  async function spin() {
+    if (isBonusRound || balance < currentBet) {
+      if (balance < currentBet) alert("Not enough points!");
+      return;
+    }
+
+    const betResult = await placeBet(currentBet);
+    balance = betResult.new_balance;
+    total_bet = betResult.total_bet;
+    updateDisplay(balance, high_score, total_bet, total_wins);
+
+    cols.forEach((col) => {
+      col.style.transform = "translateY(0)";
+      col.style.transition = "none";
+      void col.offsetHeight;
+      col.style.transform = `translateY(calc(-100% + var(--item-height) * 3))`;
+      col.style.transition = `transform ${
+        BASE_SPINNING_DURATION + Math.random() / 10
+      }s cubic-bezier(.65, .97, .72, 1)`;
+    });
+
+    document.getElementById("container").classList.add("spinning");
+
+    setTimeout(async () => {
+      setResult();
+      const winAmount = checkEnhancedWin();
+      if (winAmount > 0) {
+        const winResult = await registerWin(winAmount);
+        balance = winResult.new_balance;
+        high_score = winResult.new_high_score;
+        total_wins = winResult.total_wins;
+
+        showWinAnimation(winAmount);
+        winHistory.unshift({
+          amount: winAmount,
+          time: new Date().toLocaleTimeString(),
+        });
+        updateHistory();
+
+        updateDisplay(balance, high_score, total_bet, total_wins);
+      }
+
+      document.getElementById("container").classList.remove("spinning");
+      updateDisplay(balance, high_score, total_bet, total_wins);
+
+      cols.forEach((col) => {
+        col.style.transition = "";
+        col.style.transform = "translateY(0)";
+      });
+    }, BASE_SPINNING_DURATION * 1000);
+  }
+  function adjustBet(amount) {
+          const betInput = document.getElementById('betAmount');
+          const newBet = Math.max(10, Math.min(1000, parseInt(betInput.value) + amount))
+            betInput.value = newBet;
+        }
+  async function placeBet(amount) {
+    try {
+      const token = localStorage.getItem('slot-token'); // Retrieve token from localStorage
+      const response = await fetch("http://localhost:5000/api/bet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json", // Important: set content type
+          'Authorization': `Bearer ${token}`,  // Attach token in Authorization header
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (!response.ok) throw new Error("Bet failed");
+      return await response.json();
+    } catch (error) {
+      alert(error.message);
+      throw error;
+    }
+  }
+
+  async function registerWin(amount) {
+    try {
+      const token = localStorage.getItem('slot-token'); // Retrieve token from localStorage
+      const response = await fetch("http://localhost:5000/api/win", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,  // Attach token in Authorization header
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (!response.ok) throw new Error("Win registration failed");
+      return await response.json();
+    } catch (error) {
+      alert(error.message);
+      throw error;
+    }
+  }
+
+  function getRandomIcon() {
+    return ENHANCED_ICONS[Math.floor(Math.random() * ENHANCED_ICONS.length)];
+  }
+
+  function getRandomBonus() {
+    return BONUS_ICONS[Math.floor(Math.random() * BONUS_ICONS.length)];
+  }
+
+  function updateDisplay(balance, high_score, total_bet, total_wins) {
+    document.getElementById("balance").innerText = `Balance: ${balance}`;
+    document.getElementById("high_score").innerText = `High Score: ${high_score}`;
+    document.getElementById("total_bet").innerText = `Total Bet: ${total_bet}`;
+    document.getElementById("total_wins").innerText = `Total Wins: ${total_wins}`;
+  }
+
+  function showWinAnimation(amount) {
+    const winText = document.createElement("div");
+    winText.classList.add("win-text");
+    winText.innerText = `+${amount}`;
+    document.body.appendChild(winText);
+    setTimeout(() => winText.remove(), 1500);
+  }
+      function openPaymentModal() {
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        async function processPayment() {
+            const amount = document.getElementById('paymentAmount').value;
+            if (amount > 0) {
+                try {
+                    const token = localStorage.getItem('slot-token');
+                    const response = await fetch("http://localhost:5000/api/deposit", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ amount: parseFloat(amount) }),
+                    });
+
+                    if (!response.ok) throw new Error("Payment failed");
+                    const data = await response.json();
+
+                    // Update the balance if the payment was successful
+                    balance = data.new_balance;
+                    updateDisplay(balance, high_score, total_bet, total_wins);
+
+                    closePaymentModal();
+                    alert("Payment successful! Your balance has been updated.");
+                } catch (error) {
+                    console.error("Payment error:", error);
+                    alert("Payment failed: " + error.message);
+                }
+            } else {
+                alert("Please enter a valid amount.");
+            }
+        }
+
+  function updateHistory() {
+    const history = document.getElementById("history");
+    history.innerHTML = "";
+    winHistory.forEach((win) => {
+      const winRow = document.createElement("tr");
+      winRow.innerHTML = `<td>${win.amount}</td><td>${win.time}</td>`;
+      history.appendChild(winRow);
+    });
+  }
+</script>
+
+  </body>
+</html>

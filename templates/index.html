@@ -1,468 +1,377 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Ultimate Slot Machine</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-        <style>
-            * {
-                box-sizing: border-box;
-            }
+<!DOCTYPE html>
+<html lang="en">
 
-            :root {
-                --item-height: 100px;
-            }
-
-            body {
-                margin: 0;
-                transition: background-color 0.3s;
-            }
-
-            #container {
-                background-color: #fd9b03;
-                padding: 2rem;
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-                border-radius: 15px;
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                min-width: 567px;        }
-
-            .window {
-                position: relative;
-                overflow: hidden;
-                height: calc(3 * var(--item-height));
-                border: 1px solid #f7ce6c;
-            }
-
-            .window-border {
-                /* padding: 5px; */
-                background-image: linear-gradient(to bottom, #fcf8ad, #f8f3cd, #f9e13d);
-                border-radius: 10px;
-            }
-
-            .icon {
-                width: 80px;
-                height: var(--item-height);
-                display: block;
-                position: relative;
-                transition: transform 0.3s;
-            }
-
-            .icon img {
-                filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-            }
-
-            .outer-col {
-                overflow-y: hidden;
-                width: 100px;
-                float: left;
-                background-image: linear-gradient(#16013c, #741a5e, #430155, #16013c);
-                height: calc(var(--item-height) * 3);
-            }
-
-            .col {
-                padding: 0 10px;
-                will-change: transform;
-                transform: translateY(calc(-100% + var(--item-height) * 3));
-            }
-
-            @keyframes scroll {
-                to { transform: translateY(0); }
-            }
-
-            .win-animation {
-                animation: winBlink 1s infinite;
-            }
-
-            @keyframes winBlink {
-                0% { filter: brightness(1); }
-                50% { filter: brightness(1.5); }
-                100% { filter: brightness(1); }
-            }
-
-            .control-panel {
-                background: rgba(0,0,0,0.2);
-                padding: 1rem;
-                border-radius: 10px;
-                margin-top: 1rem;
-            }
-
-            .jackpot-counter {
-                font-size: 1.5rem;
-                color: gold;
-                text-shadow: 0 0 10px rgba(255,215,0,0.5);
-            }
-
-            .bonus-game {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: #1a1a1a;
-                padding: 2rem;
-                border-radius: 1rem;
-                text-align: center;
-                display: none;
-                z-index: 1000;
-            }
-
-            @media (max-width: 768px) {
-                #container {
-                    min-width: auto;
-                    width: 95%;
-                    padding: 1rem;
-                }
-                
-                .outer-col {
-                    width: 80px;
-                }
-            }
-        </style>
-    </head>
-    <body class="bg-gray-800">
-        <div id="container" class="dark:bg-gray-700">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex gap-2">
-                    <select id="themeSelect" class="bg-gray-800 text-white p-2 rounded" onchange="changeTheme(this.value)">
-                        <option value="default">Default</option>
-                        <option value="dark">Dark</option>
-                        <option value="neon">Neon</option>
-                    </select>
-                    <button onclick="toggleSound()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                        Sound: ON
-                    </button>
-                    <button onclick="toggleAutoSpin()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
-                        Auto Spin: OFF
-                    </button>
-                </div>
-                <div class="text-white">
-                    <div>Score: <span id="score">1000</span></div>
-                    <div>Bet: <input id="betAmount" type="number" value="100" min="10" max="1000" class="w-20 text-black p-1"></div>
-                </div>
-            </div>
-
-            <div class="window-border">
-                <div class="window">
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                    <div class="outer-col">
-                        <div class="col"></div>
-                    </div>
-                    <div class="outer-spacer"></div>
-                </div>
-            </div>
-
-            <div class="control-panel text-center">
-                <button onclick="spin()" class="bg-green-600 text-white px-8 py-3 rounded-lg text-xl hover:bg-green-700 transition-all">
-                    SPIN (Space)
-                </button>
-                <div class="jackpot-counter mt-2">Jackpot: <span id="jackpot">5000</span></div>
-            </div>
-
-            <div class="bonus-game">
-                <h2 class="text-2xl text-white mb-4">BONUS ROUND!</h2>
-                <div id="bonusSlots" class="flex gap-4 justify-center"></div>
-                <button onclick="endBonus()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">
-                    Collect Reward!
-                </button>
-            </div>
-        </div>
-
-        <div id="paytable" class="fixed top-4 left-4 bg-black bg-opacity-50 p-4 rounded text-white">
-            <h3 class="text-xl mb-2">Paytable</h3>
-            <div id="paytableContent"></div>
-        </div>
-
-        <div id="history" class="fixed top-4 right-4 bg-black bg-opacity-50 p-4 rounded text-white w-48">
-            <h3 class="text-xl mb-2">Recent Wins</h3>
-            <div id="historyContent"></div>
-        </div>
-
-        <script>
-            const BASE_ICONS = [
-                'apple', 'apricot', 'banana', 'big_win', 'cherry',
-                'grapes', 'lemon', 'lucky_seven', 'orange', 'pear',
-                'strawberry', 'watermelon'
-            ];
-
-            const ENHANCED_CONFIG = {
-                WILD_SYMBOL: 'wild',
-                BONUS_TRIGGER: 'bonus',
-                PAYLINES: [
-                    [{row: 0, col: 0}, {row: 0, col: 1}, {row: 0, col: 2}, {row: 0, col: 3}, {row: 0, col: 4}],
-                    [{row: 1, col: 0}, {row: 1, col: 1}, {row: 1, col: 2}, {row: 1, col: 3}, {row: 1, col: 4}],
-                    [{row: 2, col: 0}, {row: 2, col: 1}, {row: 2, col: 2}, {row: 2, col: 3}, {row: 2, col: 4}],
-                    [{row: 0, col: 0}, {row: 1, col: 1}, {row: 2, col: 2}, {row: 1, col: 3}, {row: 0, col: 4}],
-                    [{row: 2, col: 0}, {row: 1, col: 1}, {row: 0, col: 2}, {row: 1, col: 3}, {row: 2, col: 4}]
-                ],
-                BONUS_ROUNDS: 3,
-                AUTO_SPIN_INTERVAL: 1500
-            };
-
-            const ENHANCED_ICONS = [...BASE_ICONS, ENHANCED_CONFIG.WILD_SYMBOL, ENHANCED_CONFIG.BONUS_TRIGGER];
-            const PAYOUTS = {
-                'lucky_seven': 10,
-                'big_win': 8,
-                'cherry': 5,
-                [ENHANCED_CONFIG.WILD_SYMBOL]: 15,
-                [ENHANCED_CONFIG.BONUS_TRIGGER]: { type: 'bonus', multiplier: 5 },
-                'default': 3
-            };
-
-            const BASE_SPINNING_DURATION = 2.7;
-            const COLUMN_SPINNING_DURATION = 0.3;
-
-            let cols;
-            let score = 1000;
-            let jackpot = 5000;
-            let isSoundOn = true;
-            let currentBet = 100;
-            let isBonusRound = false;
-            let autoSpinInterval = null;
-            let winHistory = [];
-            let consecutiveWins = 0;
-
-            window.addEventListener('DOMContentLoaded', function() {
-                cols = document.querySelectorAll('.col');
-                setInitialItems();
-                initPaytable();
-                loadGame();
-                document.addEventListener('keydown', (e) => e.code === 'Space' && spin());
-            });
-
-            function setInitialItems() {
-                const baseItemAmount = 45;
-                cols.forEach((col, index) => {
-                    const amountOfItems = baseItemAmount + (index * 3);
-                    let itemsHTML = '';
-                    for (let x = 0; x <= amountOfItems; x++) {
-                        const icon = getRandomIcon();
-                        itemsHTML += `<div class="icon" data-item="${icon}"><img src="/static/items/${icon}.png"></div>`;
-                    }
-                    col.innerHTML = itemsHTML + itemsHTML;
-
-                });
-            }
-
-            function spin() {
-    if (isBonusRound || score < currentBet) {
-        if (score < currentBet) alert('Not enough points!');
-        return;
-    }
-
-    score -= currentBet;
-    updateDisplay();
-
-    // Reset animations properly
-    cols.forEach(col => {
-        col.style.transform = 'translateY(0)';
-        col.style.transition = 'none';
-        void col.offsetHeight; // Trigger reflow
-        col.style.transform = `translateY(calc(-100% + var(--item-height) * 3))`;
-        col.style.transition = `transform ${BASE_SPINNING_DURATION + Math.random()/10}s cubic-bezier(.65, .97, .72, 1)`;
-    });
-
-    document.getElementById('container').classList.add('spinning');
-
-    setTimeout(() => {
-        setResult();
-        const winAmount = checkEnhancedWin();
-        if (winAmount > 0) {
-            score += winAmount;
-            jackpot += currentBet;
-            showWinAnimation(winAmount);
-            winHistory.unshift({ amount: winAmount, time: new Date().toLocaleTimeString() });
-            updateHistory();
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Machine Game - Play Now!</title>
+    <meta name="description"
+        content="Experience the thrill of the Slot Machine Game! Spin the reels and win exciting prizes.">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: url('https://images.unsplash.com/photo-1580315142342-b7ed3b9a7b89?crop=entropy&cs=tinysrgb&fit=max&ixid=M3wzNjE1OTh8MHwxfGFsbHwxfHx8fHx8fHx8fDE2NTM1NTgxMTg&ixlib=rb-1.2.1&q=80&w=1080');
+            background-size: cover;
+            background-attachment: fixed;
         }
-        document.getElementById('container').classList.remove('spinning');
-        updateDisplay();
-        saveGame();
-        
-        // Reset animation state
-        cols.forEach(col => {
-            col.style.transition = '';
-            col.style.transform = 'translateY(0)';
+
+        .hover-effect:hover {
+            transform: scale(1.05);
+            transition: transform 0.3s ease;
+        }
+
+        .dark-mode {
+            background-color: #1a202c;
+            color: #ffffff;
+        }
+
+        .dark-mode .bg-slate-900 {
+            background-color: #2d3748;
+        }
+
+        .dark-mode .bg-gray-800 {
+            background-color: #4a5568;
+        }
+
+        .dark-mode .text-white {
+            color: #ffffff;
+        }
+
+        .dark-mode .text-black {
+            color: #000000;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+         body {
+            background-image: url('https://images.unsplash.com/photo-1580315142342-b7ed3b9a7b89?crop=entropy&cs=tinysrgb&fit=max&ixid=M3wzNjE1OTh8MHwxfGFsbHwxfHx8fHx8fHx8fDE2NTM1NTgxMTg&ixlib=rb-1.2.1&q=80&w=1080');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+
+        .hover-effect:hover {
+            transform: scale(1.05);
+            transition: transform 0.3s ease;
+        }
+
+        .dark-mode {
+            background-color: #1a202c;
+            color: #ffffff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            animation: modalOpen 0.3s ease-out;
+        }
+
+        @keyframes modalOpen {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex items-center w-full min-h-screen dark-mode">
+
+    <div class="bg-slate-900 p-8 rounded-lg shadow-xl w-full text-center text-white mx-6">
+    <nav class="fixed w-full top-0 bg-black/50 backdrop-blur-sm py-4 z-50">
+        <div class="container mx-auto flex justify-between items-center px-6">
+            <a href="" class="text-2xl font-bold text-white">🎰 SlotMaster</a>
+            <div class="space-x-4">
+                <a href="login" class="text-white hover:text-yellow-400">Sign In</a>
+                <a href="signup" class="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600">
+                    Sign Up
+                </a>
+                <button id="theme-toggle" class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-full">
+                    🌓
+                </button>
+            </div>
+        </div>
+    </nav>
+
+        <!-- Title -->
+        <h1 class="text-4xl font-bold mb-6 animate-bounce">🎰 Slot Machine Game 🎰</h1>
+        <p class="text-xl mb-8">Spin the reels and try your luck to win exciting prizes!</p>
+
+        <!-- Game Start Button -->
+        <a href="/game" aria-label="Start the Slot Machine Game"
+            class="bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-full text-lg font-bold transition duration-300 mb-6 hover-effect">
+            Start the Game
+        </a>
+
+        <!-- Countdown Timer for Bonus -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Daily Bonus in:</h2>
+            <div id="countdown" class="text-3xl font-bold text-yellow-400">00:00:00</div>
+        </div>
+
+        <!-- Introduction Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Welcome to the Slot Machine!</h2>
+            <p>Get ready to experience the thrill of the slot machine! Spin the reels and match the symbols to win
+                incredible rewards. Each spin is a chance to hit the jackpot!</p>
+        </section>
+
+        <!-- How to Play Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">How to Play</h2>
+            <ul class="list-inside list-disc space-y-2">
+                <li>Click the "Start the Game" button to begin.</li>
+                <li>Watch the reels spin, and match three identical symbols to win!</li>
+                <li>The more you spin, the higher your chances of hitting the jackpot!</li>
+            </ul>
+        </section>
+
+        <!-- Prize Information Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Prizes and Rewards</h2>
+            <p>Matching symbols on the reels can reward you with coins or even the grand jackpot!</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div class="text-center bg-green-500 p-4 rounded-lg hover-effect">
+                    <p class="font-bold">🍒 3x Symbols</p>
+                    <p class="text-lg">50 Coins</p>
+                </div>
+                <div class="text-center bg-yellow-500 p-4 rounded-lg hover-effect">
+                    <p class="font-bold">🍀 3x Symbols</p>
+                    <p class="text-lg">100 Coins</p>
+                </div>
+                <div class="text-center bg-red-500 p-4 rounded-lg hover-effect">
+                    <p class="font-bold">💎 3x Symbols</p>
+                    <p class="text-lg">500 Coins</p>
+                </div>
+                <div class="text-center bg-blue-500 p-4 rounded-lg hover-effect">
+                    <p class="font-bold">💰 Jackpot</p>
+                    <p class="text-lg">1,000 Coins</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game Features Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Game Features</h2>
+            <ul class="list-inside list-disc space-y-2">
+                <li>🎉 Real-time spinning reels</li>
+                <li>💰 Jackpot prizes and daily bonuses</li>
+                <li>🎮 Easy-to-play mechanics</li>
+                <li>📱 Fully responsive for mobile devices</li>
+            </ul>
+        </section>
+
+        <!-- User Testimonials Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">What Our Players Say</h2>
+            <blockquote class="bg-gray-800 p-4 rounded-lg mb-4 hover-effect">
+                <p>"This game is so much fun! I can't stop playing!" - Alex</p>
+            </blockquote>
+            <blockquote class="bg-gray-800 p-4 rounded-lg mb-4 hover-effect">
+                <p>"I love the graphics and the excitement of winning!" - Jamie</p>
+            </blockquote>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Leaderboard</h2>
+            <ul class="list-inside list-disc space-y-2">
+                <li class="flex justify-between items-center bg-gray-800 p-3 rounded-lg hover-effect">
+                    <span>1. Alex</span>
+                    <span>5000 Coins</span>
+                </li>
+                <li class="flex justify-between items-center bg-gray-800 p-3 rounded-lg hover-effect">
+                    <span>2. Jamie</span>
+                    <span>4500 Coins</span>
+                </li>
+                <li class="flex justify-between items-center bg-gray-800 p-3 rounded-lg hover-effect">
+                    <span>3. Sam</span>
+                    <span>4000 Coins</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- FAQs Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+            <ul class="list-inside list-disc space-y-2">
+                <li><strong>How do I start the game?</strong> Click the "Start the Game" button.</li>
+                <li><strong>What are the prizes?</strong> You can win coins and jackpots!</li>
+                <li><strong>Is there a mobile version?</strong> Yes, the game is fully responsive!</li>
+            </ul>
+        </section>
+
+        <!-- Call to Action Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Share the Fun!</h2>
+            <p>Enjoying the game? Share it with your friends on social media!</p>
+            <div class="flex justify-center space-x-4">
+                <a href="#" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-full hover-effect">Share
+                    on Facebook</a>
+                <a href="#" class="bg-pink-500 hover:bg-pink-600 text-white py-2 px-4 rounded-full hover-effect">Share
+                    on Instagram</a>
+            </div>
+        </section>
+
+        <!-- Footer Section -->
+        <footer class="text-sm">
+            <p class="mb-2">© <span id="current-year"></span> Slot Machine Game. All Rights Reserved.</p>
+            <div class="space-x-4">
+                <a href="#" class="text-blue-400 hover:text-blue-500">Privacy Policy</a>
+                <a href="#" class="text-blue-400 hover:text-blue-500">Terms of Service</a>
+                <a href="#" class="text-blue-400 hover:text-blue-500">Contact Us</a>
+            </div>
+        </footer>
+    </div>
+    <!-- <div id="signin-modal" class="modal">
+        <div class="modal-content w-full max-w-md mx-auto mt-20 bg-white dark:bg-gray-800 rounded-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Sign In</h2>
+                <span class="close-modal cursor-pointer text-2xl">&times;</span>
+            </div>
+            <form id="signin-form">
+                <input type="email" placeholder="Email" class="w-full mb-4 p-2 rounded border">
+                <div class="relative">
+                    <input type="password" placeholder="Password" class="w-full mb-4 p-2 rounded border">
+                    <i class="fas fa-eye-slash absolute right-3 top-3 cursor-pointer"></i>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    Sign In
+                </button>
+                <div class="text-center mt-4">
+                    <p class="text-sm">Or continue with</p>
+                    <div class="flex justify-center space-x-4 mt-2">
+                        <button class="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                            <i class="fab fa-google"></i>
+                        </button>
+                        <button class="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700">
+                            <i class="fab fa-facebook"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div> -->
+
+    <script>
+        // Dark/Light Mode Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            themeToggle.textContent = body.classList.contains('dark-mode') ? '🌞' : '🌓';
         });
-    }, BASE_SPINNING_DURATION * 1000);
-}
-            function checkEnhancedWin() {
-                const results = Array.from(cols).map(col => 
-                    Array.from(col.querySelectorAll('.icon img'))
-                        .slice(0, 3)
-                        .map(img => img.src.split('/').pop().split('.')[0])
-                );
 
-                let totalWin = 0;
-                let bonusTriggers = 0;
-
-                ENHANCED_CONFIG.PAYLINES.forEach(payline => {
-                    const lineSymbols = payline.map(pos => results[pos.col][pos.row]);
-                    let wildCount = 0;
-                    const symbols = lineSymbols.map(sym => {
-                        if (sym === ENHANCED_CONFIG.WILD_SYMBOL) wildCount++;
-                        return sym === ENHANCED_CONFIG.WILD_SYMBOL ? 'WILD' : sym;
-                    });
-
-                    const unique = [...new Set(symbols)];
-                    if (unique.length === 1 || (unique.length === 2 && unique.includes('WILD'))) {
-                        const baseSymbol = unique.find(s => s !== 'WILD') || 'WILD';
-                        const payout = PAYOUTS[baseSymbol]?.value || PAYOUTS.default;
-                        totalWin += currentBet * payout * (1 + wildCount * 0.5);
-                    }
-
-                    if (lineSymbols.includes(ENHANCED_CONFIG.BONUS_TRIGGER)) bonusTriggers++;
-                });
-
-                if (bonusTriggers >= 3) startBonusRound();
-                return Math.floor(totalWin);
+        function toggleTheme() {
+                body.classList.toggle('dark-mode');
+                const isDark = body.classList.contains('dark-mode');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                themeToggle.textContent = isDark ? '🌞' : '🌓';
             }
 
-            function startBonusRound() {
-                isBonusRound = true;
-                document.querySelector('.bonus-game').style.display = 'block';
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '🌞';
             }
 
-            function endBonus() {
-                isBonusRound = false;
-                document.querySelector('.bonus-game').style.display = 'none';
-                score += jackpot;
-                jackpot = 5000;
-                updateDisplay();
-            }
+            themeToggle.addEventListener('click', toggleTheme);
 
-            function showWinAnimation(amount) {
-                if (amount > currentBet * 10) {
-                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                }
-                const winMsg = document.createElement('div');
-                winMsg.textContent = `WIN: ${amount}!`;
-                winMsg.className = 'animate__animated animate__tada text-4xl text-yellow-400 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
-                document.body.appendChild(winMsg);
-                setTimeout(() => winMsg.remove(), 2000);
-            }
+        // Countdown Timer
+        const countdown = document.getElementById('countdown');
+        const countdownDate = new Date();
+        countdownDate.setHours(24, 0, 0, 0); // Set to next midnight
 
-            function updateDisplay() {
-                document.getElementById('score').textContent = score;
-                document.getElementById('jackpot').textContent = jackpot;
-                currentBet = Math.min(Math.max(parseInt(document.getElementById('betAmount').value), 10), 1000);
-            }
+        function updateCountdown() {
+            const now = new Date();
+            const diff = countdownDate - now;
 
-            function initPaytable() {
-                document.getElementById('paytableContent').innerHTML = Object.entries(PAYOUTS)
-                    .map(([symbol, value]) => `
-                        <div class="flex justify-between py-1">
-                            <span>${symbol}</span>
-                            <span>${typeof value === 'object' ? 'BONUS' : 'x'+value}</span>
-                        </div>`
-                    ).join('');
-            }
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-            function updateHistory() {
-                const historyContent = document.getElementById('historyContent');
-                historyContent.innerHTML = winHistory
-                    .slice(0, 5)
-                    .map(win => `<div class="history-item">${win.amount} (${win.time})</div>`)
-                    .join('');
-            }
+            countdown.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-            function toggleAutoSpin() {
-                const button = document.querySelector('[onclick="toggleAutoSpin()"]');
-                if (!autoSpinInterval) {
-                    autoSpinInterval = setInterval(spin, ENHANCED_CONFIG.AUTO_SPIN_INTERVAL);
-                    button.textContent = 'Auto Spin: ON';
-                    button.classList.replace('bg-purple-600', 'bg-purple-800');
-                } else {
-                    clearInterval(autoSpinInterval);
-                    autoSpinInterval = null;
-                    button.textContent = 'Auto Spin: OFF';
-                    button.classList.replace('bg-purple-800', 'bg-purple-600');
-                }
+            if (diff <= 0) {
+                countdownDate.setDate(countdownDate.getDate() + 1); // Reset to next day
             }
+        }
 
-            function changeTheme(theme) {
-                document.body.className = '';
-                switch(theme) {
-                    case 'dark': document.body.classList.add('bg-gray-900'); break;
-                    case 'neon': document.body.classList.add('bg-purple-900'); break;
-                    default: document.body.classList.add('bg-gray-800');
-                }
-            }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
 
-            function toggleSound() {
-                const button = document.querySelector('[onclick="toggleSound()"]');
-                isSoundOn = !isSoundOn;
-                button.textContent = `Sound: ${isSoundOn ? 'ON' : 'OFF'}`;
-            }
+        // Current Year for Footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        // Theme Toggle
+            
 
-            function saveGame() {
-                localStorage.setItem('slotGame', JSON.stringify({
-                    score,
-                    jackpot,
-                    preferences: {
-                        sound: isSoundOn,
-                        theme: document.getElementById('themeSelect').value
-                    }
-                }));
-            }
+        // // Auth Modal Handling
+        //     const signinModal = document.getElementById('signin-modal');
+        //     const signinBtn = document.getElementById('auth-signin');
+        //     const signupBtn = document.getElementById('auth-signup');
+        //     const closeModals = document.querySelectorAll('.close-modal');
 
-            function loadGame() {
-                const saved = JSON.parse(localStorage.getItem('slotGame'));
-                if (saved) {
-                    score = saved.score;
-                    jackpot = saved.jackpot;
-                    isSoundOn = saved.preferences.sound;
-                    changeTheme(saved.preferences.theme);
-                    document.getElementById('themeSelect').value = saved.preferences.theme;
-                    updateDisplay();
-                }
-            }
+        //     // Show Sign In Modal
+        //     signinBtn.addEventListener('click', () => {
+        //         signinModal.style.display = 'block';
+        //     });
 
-            function getRandomIcon() {
-                return ENHANCED_ICONS[Math.floor(Math.random() * ENHANCED_ICONS.length)];
-            }
+        //     // Close Modals
+        //     closeModals.forEach(btn => {
+        //         btn.addEventListener('click', () => {
+        //             btn.closest('.modal').style.display = 'none';
+        //         });
+        //     });
 
-            function setResult() {
-                cols.forEach(col => {
-                    const results = Array.from({ length: 3 }, () => getRandomIcon());
-                    const icons = col.querySelectorAll('.icon img');
-                    icons.forEach((icon, index) => {
-                        if (index < 3 || index >= icons.length - 3) {
-                            icon.src = `/static/items/${results[index % 3]}.png`;
-                        }
-                    });
-                });
-            }
-        </script>
-    </body>
-    </html>
+        //     // Toggle Password Visibility
+        //     document.querySelectorAll('.fa-eye-slash').forEach(icon => {
+        //         icon.addEventListener('click', (e) => {
+        //             const input = e.target.previousElementSibling;
+        //             if (input.type === 'password') {
+        //                 input.type = 'text';
+        //                 e.target.classList.replace('fa-eye-slash', 'fa-eye');
+        //             } else {
+        //                 input.type = 'password';
+        //                 e.target.classList.replace('fa-eye', 'fa-eye-slash');
+        //             }
+        //         });
+        //     });
+
+        //     // Handle Form Submissions
+        //     document.getElementById('signin-form').addEventListener('submit', (e) => {
+        //         e.preventDefault();
+        //         // Add your authentication logic here
+        //         alert('Sign In functionality coming soon!');
+        //         signinModal.style.display = 'none';
+        //     });
+    </script>
+</body>
+
+</html>

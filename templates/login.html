@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SlotMaster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-image: url('https://images.unsplash.com/photo-1580315142342-b7ed3b9a7b89');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen dark-mode">
+    <div class="auth-card rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">Welcome Back!</h1>
+            <p class="text-gray-400">Login to continue to SlotMaster</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-medium mb-2">Email</label>
+                <input type="email" id="email" name="email"
+                    class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-blue-500" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Password</label>
+                <div class="relative">
+                    <input type="password" id="password" name="password"
+                        class="w-full px-4 py-2 rounded-lg bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-blue-500" required>
+                    <button type="button" class="absolute right-3 top-3 text-gray-400 hover:text-white" id="togglePassword">
+                        <i class="fas fa-eye-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-all">
+                Sign In
+            </button>
+
+            <div class="text-center mt-6">
+                <p class="text-sm text-gray-400">
+                    Don't have an account?
+                    <a href="signup.html" class="text-blue-400 hover:text-blue-300">Create one</a>
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Dark Mode Toggle
+        const themeToggle = localStorage.getItem('theme');
+        if (themeToggle === 'dark') document.body.classList.add('dark-mode');
+
+        // Password Visibility
+        document.getElementById("togglePassword").addEventListener('click', function () {
+            const passwordInput = document.getElementById("password");
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            this.innerHTML = isPassword ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
+
+        // Handle form submission with fetch
+        document.getElementById("loginForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            const formData = { email: email, password: password };
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+
+                    localStorage.setItem('slot-token', data.token)
+                    window.location.href = '/game';  // Redirect to the dashboard after successful login
+                } else {
+                    alert('Error: ' + data.message);  // Show error message from the server
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred, please try again later.');
+            });
+        });
+    </script>
+</body>
+
+</html>
